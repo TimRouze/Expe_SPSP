@@ -14,6 +14,8 @@ In the meantime, here are the basic informations needed to reproduce our experim
 - [Refseq](fof_refseq.txt)
 - [Salmonellas](fof_salmonellas.txt)
 
+Every genome used for experiments where taken from these sets. Always in the order of appearance in the files.
+
 ## Command lines
 ### Simka
 ```sh
