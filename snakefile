@@ -1,0 +1,198 @@
+import os
+import sys
+
+#Load config file
+configfile: "config.yaml"
+
+# PATHS
+DATA_DIR = config['data']
+RESULTS_DIR = config['out']
+LOGS_DIR = config['logs']
+PATH_SPSP = config['path_to_supersampler']
+PATH_SIMKA = config['path_to_simka']
+
+# OPTIONS
+NB_FILES = config['nb_files']
+REFS = config['references']
+RATE = config['subrates']
+K_SIZES = config['k']
+M_SIZES = config['minimizer_size']
+
+#CHECKING THAT INPUT AND OUTPUT DIRS EXIST"
+if not os.path.exists(DATA_DIR):
+    print(f"{DATA_DIR} does not exists, snakefile won't be able to run as it will be unable to fetch data.")
+    sys.exit("Shutting down...")
+if not os.path.exists(LOGS_DIR):
+    print(f"{LOGS_DIR} does not exists, creating it and sub_directories...")
+    os.makedirs(LOGS_DIR)
+    for ref in REFS:
+        for n_file in NB_FILES:
+            curr_path = LOGS_DIR+ref+"_"+str(n_file)
+            os.makedirs(curr_path)
+if os.path.exists(RESULTS_DIR):
+    for ref in REFS:
+        for n_file in NB_FILES:
+            curr_path = RESULTS_DIR+ref+"_"+str(n_file)
+            if not os.path.exists(curr_path):
+                print(f"{curr_path} does not exist, creating dir...")
+                os.makedirs(curr_path)
+                os.makedirs(curr_path+"/spsp")
+                os.makedirs(curr_path+"/sourmash")
+                os.makedirs(curr_path+"/benchs")
+                for k in K_SIZES:
+                    os.makedirs(curr_path+"/results_simka_k"+str(k))
+else:
+    print(f"{RESULTS_DIR} does not exists, creating it and sub_directories...")
+    os.makedirs(RESULTS_DIR)
+    for ref in REFS:
+        for n_file in NB_FILES:
+            curr_path = RESULTS_DIR+ref+"_"+str(n_file)
+            os.makedirs(curr_path)
+            os.makedirs(curr_path+"/spsp")
+            os.makedirs(curr_path+"/sourmash")
+            os.makedirs(curr_path+"/benchs")
+            for k in K_SIZES:
+                os.makedirs(curr_path+"/results_simka_k"+str(k))
+
+# Sketch creation for SuperSampler
+rule sub_SPSP:
+    input:
+        DATA_DIR+"{reference}_{nfiles}_fof.txt"
+    output:
+        RESULTS_DIR+"{reference}_{nfiles}/spsp/sub{rate}_{m}_{k}_{reference}_{nfiles}_fof.txt"
+    log:
+        LOGS_DIR+"{reference}_{nfiles}/log_subsampling_spsp_{rate}_{m}_{k}_{reference}.txt"
+    shell:
+        "\\time ./"+PATH_SPSP+"sub_sampler -f {input} -s {wildcards.rate} -p "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/spsp/sub{wildcards.rate}_{wildcards.m}_{wildcards.k}_ -k {wildcards.k} -m {wildcards.m} 2> {log} ; "
+        "printf '{output}\n' >> "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/spsp/sketches_spsp.txt"
+
+# Sketch creation for Sourmash
+rule sub_sourmash:
+    input:
+        DATA_DIR+"{reference}_{nfiles}_fof.txt"
+    output:
+        RESULTS_DIR+"{reference}_{nfiles}/sourmash/{reference}_{rate}_{k}_sourmash.zip"
+    conda:
+        "sourmash.yml"
+    log:
+        LOGS_DIR+"{reference}_{nfiles}/log_subsampling_sourmash_{rate}_{k}_{reference}.txt"
+    shell:
+        "\\time sourmash -q sketch dna -p scaled={wildcards.rate},k={wildcards.k} --from-file {input} -o {output} 2> {log} ; "
+        "printf '{output}\n' >> "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/sourmash/sketches_sourmash.txt"
+
+# Sketch comparison for SuperSampler
+rule compare_SPSP:
+    input:
+        RESULTS_DIR+"{reference}_{nfiles}/spsp/sub{rate}_{m}_{k}_{reference}_{nfiles}_fof.txt"
+    output:
+        jaccard = RESULTS_DIR+"{reference}_{nfiles}/outputSPSP_{reference}_{rate}_{m}_{k}_jaccard.csv.gz",
+        containment = RESULTS_DIR+"{reference}_{nfiles}/outputSPSP_{reference}_{rate}_{m}_{k}_containment.csv.gz"
+    benchmark:
+        RESULTS_DIR+"{reference}_{nfiles}/benchs/{reference}_{rate}_{m}_{k}_spsp_bench.txt"
+    log:
+        LOGS_DIR+"{reference}_{nfiles}/log_comparison_spsp_{rate}_{m}_{k}_{reference}.txt"
+    shell:
+        "\\time ./"+PATH_SPSP+"comparator -f {input} -o "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/outputSPSP_{wildcards.reference}_{wildcards.rate}_{wildcards.m}_{wildcards.k} 2> {log}"
+
+# Creation/population of files of files of results for further analysis
+rule write_fof_spsp:
+    input:
+        jaccard = RESULTS_DIR+"{reference}_{nfiles}/outputSPSP_{reference}_{rate}_{m}_{k}_jaccard.csv.gz",
+        containment = RESULTS_DIR+"{reference}_{nfiles}/outputSPSP_{reference}_{rate}_{m}_{k}_containment.csv.gz"
+    output:
+        temp("link_{reference}_{rate}_{m}_{k}_{nfiles}.txt")
+    shell:
+        "printf '{input.jaccard}\n' >> "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/results_jaccard_spsp.txt ; "
+        "printf '{input.containment}\n' >> "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/results_containment_spsp.txt ; "
+        "printf '"+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/benchs/{wildcards.reference}_{wildcards.rate}_{wildcards.m}_spsp_bench.txt\n' >> "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/benchs/bench_{wildcards.reference}_fof.txt ; "
+	    "echo '' > {output}"
+        
+# Sketch comparison for sourmash, outputs containment index matrices
+rule compare_sourmash_containment:
+    input:
+        RESULTS_DIR+"{reference}_{nfiles}/sourmash/{reference}_{rate}_{k}_sourmash.zip"
+    output:
+        RESULTS_DIR+"{reference}_{nfiles}/outputSourmash_containment_{reference}_{rate}_{k}.csv"
+    benchmark:
+        RESULTS_DIR+"{reference}_{nfiles}/benchs/{reference}_{rate}_{k}_sourmash_bench.txt"
+    conda:
+        "sourmash.yml"
+    log:
+        LOGS_DIR+"{reference}_{nfiles}/log_comparison_containment_sourmash_{rate}_{k}_{reference}.txt"
+    shell:
+        "\\time sourmash -q compare {input} --containment --csv {output} --ksize {wildcards.k} 2> {log}"
+
+# Sketch comparison for sourmash, outputs Jaccard index matrices.
+rule compare_sourmash_jaccard:
+    input:
+        sketch=RESULTS_DIR+"{reference}_{nfiles}/sourmash/{reference}_{rate}_{k}_sourmash.zip",
+        wait=RESULTS_DIR+"{reference}_{nfiles}/outputSourmash_containment_{reference}_{rate}_{k}.csv"
+    output:
+        RESULTS_DIR+"{reference}_{nfiles}/outputSourmash_jaccard_{reference}_{rate}_{k}.csv"
+    conda:
+        "sourmash.yml"
+    log:
+        LOGS_DIR+"{reference}_{nfiles}/log_comparison_jaccard_sourmash_{rate}_{k}_{reference}.txt"
+    shell:
+        "\\time sourmash -q compare {input.sketch} --csv {output} --ksize {wildcards.k} 2> {log}"
+
+# Sorting the result matrices for sourmash to have files ordered the same way as Simka's and SuperSampler's results
+rule sort_sourmash:
+    input:
+        containment=RESULTS_DIR+"{reference}_{nfiles}/outputSourmash_containment_{reference}_{rate}_{k}.csv",
+        jaccard=RESULTS_DIR+"{reference}_{nfiles}/outputSourmash_jaccard_{reference}_{rate}_{k}.csv"
+    output:
+        containment = RESULTS_DIR+"{reference}_{nfiles}/sorted_sourmash_containment_{reference}_{rate}_{k}.csv",
+        jaccard = RESULTS_DIR+"{reference}_{nfiles}/sorted_sourmash_jaccard_{reference}_{rate}_{k}.csv",
+        link = temp("link_sm_{reference}_{rate}_{k}_{nfiles}.txt")
+    shell:
+        "./"+PATH_SPSP+"sortCSV {input.containment} {output.containment} "+DATA_DIR+"{wildcards.reference}_{wildcards.nfiles}_fof.txt ; "
+        "printf '{output.containment}\n' >> "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/results_sourmash_containment_{wildcards.k}.txt ; "
+        "./"+PATH_SPSP+"sortCSV {input.jaccard} {output.jaccard} "+DATA_DIR+"{wildcards.reference}_{wildcards.nfiles}_fof.txt ; "
+        "printf '{output.jaccard}\n' >> "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/results_sourmash_jaccard_{wildcards.k}.txt ; "
+        "touch {output.link}"
+
+# Creation/population of files of files of results for further analysis
+rule write_fof_sourmash:
+    input:
+        "link_sm_{reference}_{rate}_{k}_{nfiles}.txt"
+    output:
+        link=temp("link_2sm_{reference}_{rate}_{k}_{nfiles}.txt")
+    shell:
+        "printf '"+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/benchs/{wildcards.reference}_{wildcards.rate}_{wildcards.k}_sourmash_bench.txt\n' >> "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/benchs/bench_{wildcards.reference}_{wildcards.k}_fof.txt ; "
+        "touch {output.link}"
+
+# Run simka
+rule simka:
+    input:
+        DATA_DIR+"fof_simka_{reference}_{nfiles}.txt"
+    output:
+        "simka_{reference}_{nfiles}_{k}_done.txt"
+    benchmark:
+        RESULTS_DIR+"{reference}_{nfiles}/benchs/simka_{reference}_{nfiles}_{k}_bench.txt"
+    shell:
+        "./"+PATH_SIMKA+"simka -in {input} -out "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/results_simka_k{wildcards.k} -out-tmp "+PATH_SIMKA+"tmp_out_{wildcards.reference}_{wildcards.k} -abundance-min 1 -kmer-size {wildcards.k} ; "
+        "touch {output}"
+
+# Transform the n subsampling files created by SuperSampler in one tar archive to simplify sketch size monitoring.
+rule finish:
+    input:
+        "link_{reference}_{rate}_{m}_{k}_{nfiles}.txt",
+        "link_2sm_{reference}_{rate}_{k}_{nfiles}.txt",
+        "simka_{reference}_{nfiles}_{k}_done.txt"
+    output:
+        temp("haha_{reference}_{rate}_{m}_{k}_{nfiles}.txt")
+    shell:
+        "gzip -df "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/spsp/sub{wildcards.rate}_{wildcards.m}_{wildcards.k}_*.gz ; "
+        "tar --exclude=*.gz --exclude=*.txt --remove-files -cf "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/spsp/all{wildcards.rate}_{wildcards.m}_{wildcards.k}.tar "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/spsp/sub{wildcards.rate}_{wildcards.m}_{wildcards.k}* ; "
+        "gzip -f9 "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/spsp/all{wildcards.rate}_{wildcards.m}_{wildcards.k}.tar ; "
+        "touch {output}"
+
+# Expend in regard to parameters selected on the config file.
+rule compute:
+    input:
+        expand("haha_{reference}_{rate}_{m}_{k}_{nfiles}.txt",reference=REFS, rate = RATE, m = M_SIZES, k = K_SIZES, nfiles = NB_FILES)
+    output:
+        temp("expe_end.txt")
+    shell:
+        "touch {output} ; "

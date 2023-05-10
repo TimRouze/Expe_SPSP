@@ -1,0 +1,17 @@
+# Paths
+data: Data/
+out: Results/
+logs: Logs/
+path_to_supersampler: supersampler_bin/
+path_to_simka: Simka/
+
+# General options:
+nb_files: [10] 
+references: ["refseq", "salmonelle"]
+
+# Tools options: 
+subrates:  [500, 1000]
+k: [31, 63]
+
+# SuperSampler specific:
+minimizer_size: [13, 15]
