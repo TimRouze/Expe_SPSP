@@ -6,11 +6,11 @@ path_to_supersampler: supersampler_bin/
 path_to_simka: Simka/
 
 # General options:
-nb_files: [10] 
-references: ["refseq"]
+nb_files: [100] 
+references: ["salmonelle"]
 
 # Tools options: 
-subrates:  [500, 1000]
+subrates:  [500, 1000, 2000]
 k: [63]
 
 # SuperSampler specific:
