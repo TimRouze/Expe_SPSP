@@ -39,12 +39,12 @@ gzip -d Results/refseq_10/*.gz
 
 To create a CSV file, run the following python script:
 ```sh
-python3 Stats.py path/to/results_containment_spsp_{k-value}.txt Path/to/results_sourmash_containment_{k-value}.txt Path/to/results_simka_k{k-value}/mat_presenceAbsence_simka-jaccard_asym.csv Path/to/fof_tar_spsp_{k-value}.txt Path/to/sketches_sourmash_{k-value}.txt Path/to/bench_{genome}_{k-value}_fof.txt {output csv filename}
+python3 Stats.py path/to/results_containment_{k-value}_spsp.txt Path/to/results_sourmash_containment_{k-value}.txt Path/to/results_simka_k{k-value}/mat_presenceAbsence_simka-jaccard_asym.csv Path/to/fof_tar_spsp_{k-value}.txt Path/to/sketches_sourmash_{k-value}.txt Path/to/bench_{genome}_{k-value}_fof.txt {output csv filename}
 ```
 
 For the previous example, the command would look like this to create a csv for k = 63 on 10 refseq genomes with the basic options on the ```config.yaml``` file.:
 ```sh
-python3 Stats.py Results/refseq_10/results_containment_spsp.txt Results/refseq_10/results_sourmash_containment_63.txt Results/refseq_10/results_simka_k63/mat_presenceAbsence_simka-jaccard_asym.csv Results/refseq_10/spsp/fof_tar_63_spsp.txt Results/refseq_10/sourmash/sketches_sourmash.txt Results/refseq_10/benchs/bench_refseq_63_fof.txt test_results.csv
+python3 Stats.py Results/salmonelle_100/results_containment_63_spsp.txt Results/salmonelle_100/results_sourmash_containment_63.txt Results/salmonelle_100/results_simka_k63/mat_presenceAbsence_simka-jaccard_asym.csv Results/salmonelle_100/spsp/fof_tar_spsp_63.txt Results/salmonelle_100/sourmash/sketches_sourmash_63.txt Results/salmonelle_100/benchs/bench_salmonelle_63_fof.txt test_results.csv
 ```
 
 This should output a csv file named ```test_results.csv``` that contains every info needed to construct graphs.
