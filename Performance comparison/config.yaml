@@ -7,11 +7,11 @@ path_to_simka: Simka/
 
 # General options:
 nb_files: [10] 
-references: ["refseq", "salmonelle"]
+references: ["refseq"]
 
 # Tools options: 
 subrates:  [500, 1000]
-k: [31, 63]
+k: [63]
 
 # SuperSampler specific:
 minimizer_size: [13, 15]

@@ -63,7 +63,7 @@ rule sub_SPSP:
     log:
         LOGS_DIR+"{reference}_{nfiles}/log_subsampling_spsp_{rate}_{m}_{k}_{reference}.txt"
     shell:
-        "\\time ./"+PATH_SPSP+"sub_sampler -f {input} -s {wildcards.rate} -p "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/spsp/sub{wildcards.rate}_{wildcards.m}_{wildcards.k}_ -k {wildcards.k} -m {wildcards.m} 2> {log} ; "
+        "\\time ./"+PATH_SPSP+"sub_sampler -f {input} -s {wildcards.rate} -p "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/spsp/sub{wildcards.rate}_{wildcards.m}_{wildcards.k}_ -k {wildcards.k} -m {wildcards.m} -v 0 2> {log} ; "
         "printf '{output}\n' >> "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/spsp/sketches_spsp.txt"
 
 # Sketch creation for Sourmash
@@ -78,7 +78,7 @@ rule sub_sourmash:
         LOGS_DIR+"{reference}_{nfiles}/log_subsampling_sourmash_{rate}_{k}_{reference}.txt"
     shell:
         "\\time sourmash -q sketch dna -p scaled={wildcards.rate},k={wildcards.k} --from-file {input} -o {output} 2> {log} ; "
-        "printf '{output}\n' >> "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/sourmash/sketches_sourmash.txt"
+        "printf '{output}\n' >> "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/sourmash/sketches_sourmash_{wildcards.k}.txt"
 
 # Sketch comparison for SuperSampler
 rule compare_SPSP:
@@ -102,9 +102,9 @@ rule write_fof_spsp:
     output:
         temp("link_{reference}_{rate}_{m}_{k}_{nfiles}.txt")
     shell:
-        "printf '{input.jaccard}\n' >> "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/results_jaccard_spsp.txt ; "
-        "printf '{input.containment}\n' >> "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/results_containment_spsp.txt ; "
-        "printf '"+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/benchs/{wildcards.reference}_{wildcards.rate}_{wildcards.m}_spsp_bench.txt\n' >> "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/benchs/bench_{wildcards.reference}_fof.txt ; "
+        "printf '"+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/outputSPSP_{wildcards.reference}_{wildcards.rate}_{wildcards.m}_{wildcards.k}_jaccard.csv\n' >> "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/results_jaccard_{wildcards.k}_spsp.txt ; "
+        "printf '"+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/outputSPSP_{wildcards.reference}_{wildcards.rate}_{wildcards.m}_{wildcards.k}_containment.csv\n' >> "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/results_containment_{wildcards.k}_spsp.txt ; "
+        "printf '"+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/benchs/{wildcards.reference}_{wildcards.rate}_{wildcards.m}_{wildcards.k}_spsp_bench.txt\n' >> "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/benchs/bench_{wildcards.reference}_{wildcards.k}_fof.txt ; "
 	    "echo '' > {output}"
         
 # Sketch comparison for sourmash, outputs containment index matrices
@@ -186,6 +186,7 @@ rule finish:
         "gzip -df "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/spsp/sub{wildcards.rate}_{wildcards.m}_{wildcards.k}_*.gz ; "
         "tar --exclude=*.gz --exclude=*.txt --remove-files -cf "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/spsp/all{wildcards.rate}_{wildcards.m}_{wildcards.k}.tar "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/spsp/sub{wildcards.rate}_{wildcards.m}_{wildcards.k}* ; "
         "gzip -f9 "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/spsp/all{wildcards.rate}_{wildcards.m}_{wildcards.k}.tar ; "
+        "printf '"+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/spsp/all{wildcards.rate}_{wildcards.m}_{wildcards.k}.tar.gz\n' >> "+RESULTS_DIR+"{wildcards.reference}_{wildcards.nfiles}/spsp/fof_tar_spsp_{wildcards.k}.txt ; "
         "touch {output}"
 
 # Expend in regard to parameters selected on the config file.
