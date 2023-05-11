@@ -1,6 +1,7 @@
 # Expe_SPSP
 Every experiments made for [SuperSampler's paper](link to biorxive)
-We will update this repository to provide the snakefile used for the experiments ASAP.
+
+The performance comparison experiment can be reproduced by using the snakefile in the folder 'Performance comparison'.
 In the meantime, here are the basic informations needed to reproduce our experiments:
 
 ## Tools used
