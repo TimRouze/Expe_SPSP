@@ -42,12 +42,6 @@ SortCSV is present on [SuperSampler's repository](https://github.com/TimRouze/su
 ```
 
 ## Values tested:
-### Performance comparison
-
-- K-mer size = [31, 63]
-- Subsampling rate = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000]
-- Minimizer size (specific to SuperSampler) = [11, 13, 15]
-- 1024 RefSeq genomes and 1024 Salmonellas.
 
 ### Scalability experiment
 As only computational time and ram were monitored, we did not launch Simka on these experiments.
