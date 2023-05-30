@@ -8,7 +8,7 @@ In the meantime, here are the basic informations needed to reproduce our experim
 
 - [Simka](https://github.com/GATB/simka)
 - [Sourmash](https://github.com/sourmash-bio/sourmash)
-- [SuperSampler](https://github.com/TimRouze/SuperSampler)
+- [SuperSampler](https://github.com/TimRouze/SuperSampler) Commit number for latest experiments is: [33548bc](https://github.com/TimRouze/supersampler/commit/33548bc332cc19e997f5e99a0f377f751d494d36)
 
 ## Data
 
