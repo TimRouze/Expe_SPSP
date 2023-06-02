@@ -22,7 +22,7 @@ snakemake --cores all expe_end.txt --use-conda -k
 
 The first run will take a bit longer as Snakemake will install Sourmash and create an environment for it.
 
-## Getting resuslts
+## Getting results
 
 First you will need to unzip Simkas matrices and SuperSampler results.
 
