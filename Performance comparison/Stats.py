@@ -7,13 +7,20 @@ def writeCSV(sketches_sm, sketches_spsp, results_spsp, results_sourmash, results
     read_bench(benchs, data)
     read_index_size(sketches_sm, sketches_spsp, data)
     compare_results(results_spsp, results_sourmash, results_simka, data)
+    print(data)
     with open(out, 'w') as out_file:
         out_file.write("Error_containment,Error_jaccard,time,ram,disk,tool_name,sub_rate\n")
         for key in data:
             for name in data[key]:
-                    out_file.write(str(data[key][name]['diff_containment']))
+                    if 'diff_containment' in data[key][name]:
+                        out_file.write(str(data[key][name]['diff_containment']))
+                    else:
+                        out_file.write('0')
                     out_file.write(",")
-                    out_file.write(str(data[key][name]['diff_jaccard']))
+                    if 'diff_jaccard' in data[key][name]:
+                        out_file.write(str(data[key][name]['diff_jaccard']))
+                    else:
+                        out_file.write('0')
                     out_file.write(",")
                     out_file.write(str(data[key][name]['time']))
                     out_file.write(",")
@@ -80,12 +87,15 @@ def read_index_size(sub_sourmash, sub_spsp, data):
             line = fof_sub_sourmash.readline().strip()
     with open(sub_spsp, 'r') as fof_sub_spsp:
         f_name = fof_sub_spsp.readline().strip()
+        print(sub_spsp)
         while f_name != "":
             size = 0
             #SAVING NAMES FOR DISPLAY IN FIGURE
             tmp = f_name.split("/")[-1]
             tool = "SuperSampler_m" + [s for s in re.findall(r'\d+', tmp)][1]
             key = [s for s in re.findall(r'\d+', tmp)][0]
+            print(key)
+            print(data[key])
             if key in data:
                 data[key][tool]['disk'] = os.stat(f_name).st_size/(1024*1024)
             else:
@@ -128,7 +138,6 @@ def get_diff(files_tool, simka, data, tool_name):
                     data[key][tool][diff] = abs(np.mean(simka) - np.mean(df))
                 else:
                     #Using only half matrices as Jaccard is symetrical
-                    print(diff)
                     data[key][tool][diff] = np.mean(abs(ltri_simka - ltri_df))
             else:
                 print(f"should not happen, {tool} not in dict[{key}]")
@@ -136,7 +145,7 @@ def get_diff(files_tool, simka, data, tool_name):
             print(f"should not happen, {key} not in dict.")
 
 
-def compare_results(res_spsp, res_sourmash, res_simka, data):
+'''def compare_results(res_spsp, res_sourmash, res_simka, data):
     #READING SIMKA
     simka = pd.read_csv(res_simka, sep = ";", header = 0)
     simka = simka.drop(simka.columns[[0]], axis = 1)
@@ -156,6 +165,38 @@ def compare_results(res_spsp, res_sourmash, res_simka, data):
     if files_spsp[0].find("containment") != -1:
         for i in range(len(files_spsp)):
             files_spsp[i] = files_spsp[i].replace("containment", "jaccard")
+    if files_sourmash[0].find("containment") != -1:
+        for i in range(len(files_sourmash)):
+            files_sourmash[i] = files_sourmash[i].replace("containment", "jaccard")
+    get_diff(files_spsp, simka, data, "SuperSampler_m")
+    get_diff(files_sourmash, simka, data, "Sourmash")
+'''
+def compare_results(res_spsp, res_sm, res_simka, data):
+    #READING SIMKA CONTAINMENT
+    simka = pd.read_csv(res_simka, sep = ";", header = 0)
+    simka = simka.drop(simka.columns[[0]], axis = 1)
+    simka =  simka.applymap(lambda x: 1-x)
+    simka = simka.to_numpy()
+    #ltri_simka = simka[np.tril_indices_from(simka, k = -1)]
+
+    #GETTING EVERY CSV FILENAME
+    files_spsp = []
+    files_spsp = populate_list(res_spsp)
+    files_sourmash = populate_list(res_sm)
+
+    #COMPUTING DIFFERENCES FOR SPSP + SAVING IN DICT
+    get_diff(files_spsp, simka, data, "SuperSampler_m")
+    get_diff(files_sourmash, simka, data, "Sourmash")
+
+    #PREPPING FILES TO COMPUTE JACCARD DIFF
+    if files_spsp[0].find("containment") != -1:
+        for i in range(len(files_spsp)):
+            files_spsp[i] = files_spsp[i].replace("containment", "jaccard")
+        res_simka = res_simka.replace("simka-jaccard_asym", "jaccard")
+        simka = pd.read_csv(res_simka, sep = ";", header = 0)
+        simka = simka.drop(simka.columns[[0]], axis = 1)
+        simka =  simka.applymap(lambda x: 1-x)
+        simka = simka.to_numpy()
     if files_sourmash[0].find("containment") != -1:
         for i in range(len(files_sourmash)):
             files_sourmash[i] = files_sourmash[i].replace("containment", "jaccard")
